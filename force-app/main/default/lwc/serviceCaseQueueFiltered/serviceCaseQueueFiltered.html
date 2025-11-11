@@ -1,0 +1,48 @@
+<template>
+    <lightning-card title={title}>
+        <div>
+            <lightning-button label="Refresh" onclick={handleRefresh} disabled={isLoading}></lightning-button>
+
+            <template if:true={isLoading}>
+                <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+            </template>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Case #</th>
+                        <th>Subject</th>
+                        <th>Owner</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template for:each={cases} for:item="c">
+                        <tr key={c.id}>
+                            <td>
+                                <a href="javascript:void(0);" onclick={handleCaseClick} data-id={c.id}>{c.caseNumber}</a>
+                            </td>
+                            <td>{c.subject}</td>
+                            <td>
+                                <a href="javascript:void(0);" onclick={handleOwnerClick} data-id={c.ownerId}>{c.ownerName}</a>
+                            </td>
+                            <td>{c.priority}</td>
+                            <td>
+                                <lightning-combobox
+                                    value={c.status}
+                                    options={statusOptions}
+                                    onchange={handleStatusChange}
+                                    data-case-id={c.id}
+                                    disabled={isLoading}>
+                                </lightning-combobox>
+                            </td>
+                            <td>{c.createdDate}</td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </lightning-card>
+</template>
