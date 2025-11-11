@@ -1,0 +1,26 @@
+<apex:page controller="AccountCasesPdfCtrl" renderAs="pdf" showHeader="false" sidebar="false" applyHtmlTag="false" applyBodyTag="false">
+    <html>
+        <head>
+            
+        </head>
+        <body>
+            <h1>Cases Opened Last Week (Mon–Sun)</h1>
+            <p><strong>Week of {!weekStart} to {!weekEnd}</strong></p>
+
+            <apex:pageBlock>
+                <apex:pageBlockTable value="{!caseRows}" var="row">
+                    <apex:column headerValue="Account Name" value="{!row.accountName}"/>
+                    <apex:column headerValue="Account Owner" value="{!row.accountOwnerName}"/>
+                    <apex:column headerValue="Case #" value="{!row.caseNumber}"/>
+                    <apex:column headerValue="Status" value="{!row.status}"/>
+                    <apex:column headerValue="Priority" value="{!row.priority}"/>
+                    <apex:column headerValue="Origin" value="{!row.origin}"/>
+                </apex:pageBlockTable>
+            </apex:pageBlock>
+
+            <div>
+                Generated on {!generatedDate} | Salesforce
+            </div>
+        </body>
+    </html>
+</apex:page>
