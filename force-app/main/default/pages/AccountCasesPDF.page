@@ -1,25 +1,135 @@
-<apex:page controller="AccountCasesPdfCtrl" renderAs="pdf" showHeader="false" sidebar="false" applyHtmlTag="false" applyBodyTag="false">
+<apex:page controller="AccountCasesPdfCtrl" renderAs="pdf" 
+           showHeader="false" sidebar="false" 
+           applyHtmlTag="false" applyBodyTag="false"
+           cache="false">
+
     <html>
         <head>
-            
+            <meta charset="utf-8"/>
+            <style type="text/css">
+                body {
+                    font-family: 'Helvetica', 'Arial', sans-serif;
+                    font-size: 12px;
+                    color: #333;
+                    margin: 40px;
+                    line-height: 1.4;
+                }
+
+                h1 {
+                    font-size: 18px;
+                    color: #1a1a1a;
+                    margin-bottom: 8px;
+                    font-weight: bold;
+                    text-align: center;
+                }
+
+                .subtitle {
+                    font-size: 14px;
+                    color: #555;
+                    text-align: center;
+                    margin-bottom: 25px;
+                    font-weight: normal;
+                }
+
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                    background-color: #ffffff;
+                }
+
+                th {
+                    background-color: #f2f2f2;
+                    color: #333;
+                    font-weight: bold;
+                    text-align: left;
+                    padding: 12px 10px;
+                    border-bottom: 2px solid #0070d2;
+                    font-size: 12px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                td {
+                    padding: 10px;
+                    border-bottom: 1px solid #e0e0e0;
+                    font-size: 11.5px;
+                    vertical-align: top;
+                }
+
+                tr:nth-child(even) {
+                    background-color: #f9f9f9;
+                }
+
+                tr:hover {
+                    background-color: #f5f9ff;
+                }
+
+                .footer {
+                    margin-top: 40px;
+                    font-size: 10px;
+                    color: #777;
+                    text-align: center;
+                    border-top: 1px solid #eee;
+                    padding-top: 10px;
+                }
+
+                .no-data {
+                    text-align: center;
+                    color: #999;
+                    font-style: italic;
+                    padding: 20px;
+                }
+            </style>
         </head>
+
         <body>
             <h1>Cases Opened Last Week (Mon–Sun)</h1>
-            <p><strong>Week of {!weekStart} to {!weekEnd}</strong></p>
+            <div class="subtitle">
+                <strong>Week of {!weekStart}</strong> to <strong>{!weekEnd}</strong>
+            </div>
 
-            <apex:pageBlock>
-                <apex:pageBlockTable value="{!caseRows}" var="row">
-                    <apex:column headerValue="Account Name" value="{!row.accountName}"/>
-                    <apex:column headerValue="Account Owner" value="{!row.accountOwnerName}"/>
-                    <apex:column headerValue="Case #" value="{!row.caseNumber}"/>
-                    <apex:column headerValue="Status" value="{!row.status}"/>
-                    <apex:column headerValue="Priority" value="{!row.priority}"/>
-                    <apex:column headerValue="Origin" value="{!row.origin}"/>
-                </apex:pageBlockTable>
-            </apex:pageBlock>
+            <apex:outputPanel layout="block" rendered="{!caseRows != null && caseRows.size > 0}">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Account Name</th>
+                            <th>Account Owner</th>
+                            <th>Case #</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Origin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <apex:repeat value="{!caseRows}" var="row">
+                            <tr>
+                                <td>{!row.accountName}</td>
+                                <td>{!row.accountOwnerName}</td>
+                                <td><strong>{!row.caseNumber}</strong></td>
+                                <td>
+                                    <apex:outputText value="{!row.status}" 
+                                    style="{!IF(row.status == 'Closed', 'color:#28a745;', 
+                                    IF(row.status == 'Escalated', 'color:#dc3545;font-weight:bold;', ''))}" />
+                                </td>
+                                <td>
+                                    <apex:outputText value="{!row.priority}" 
+                                    style="{!IF(row.priority == 'High', 'color:#dc3545;font-weight:bold;', 
+                                                             IF(row.priority == 'Critical', 'color:#721c24;background:#f8d7da;padding:2px 6px;border-radius:3px;', ''))}" />
+                                </td>
+                                <td>{!row.origin}</td>
+                            </tr>
+                        </apex:repeat>
+                    </tbody>
+                </table>
+            </apex:outputPanel>
 
-            <div>
-                Generated on {!generatedDate} | Salesforce
+            <apex:outputPanel layout="block" rendered="{!caseRows == null || caseRows.size == 0}">
+                <div class="no-data">No cases were opened during this period.</div>
+            </apex:outputPanel>
+
+            <div class="footer">
+                Generated on {!generatedDate} | Powered by Salesforce
             </div>
         </body>
     </html>
