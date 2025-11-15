@@ -1,0 +1,17 @@
+.appearing {
+    animation: fadeIn 1s;
+}
+
+.disappearing {
+    animation: fadeOut 1s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}

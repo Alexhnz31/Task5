@@ -1,26 +1,26 @@
 <template>
     <lightning-card title={title}>
         <div>
-            <lightning-button label="Refresh" onclick={handleRefresh} disabled={isLoading}></lightning-button>
+            <lightning-button label="Обновить" onclick={handleRefresh} disabled={isLoading}></lightning-button>
 
             <template if:true={isLoading}>
-                <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                <lightning-spinner alternative-text="Загрузка" size="medium"></lightning-spinner>
             </template>
 
             <table>
                 <thead>
                     <tr>
-                        <th>Case #</th>
-                        <th>Subject</th>
-                        <th>Owner</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Created</th>
+                        <th>Номер кейса</th>
+                        <th>Тема</th>
+                        <th>Владелец</th>
+                        <th>Приоритет</th>
+                        <th>Статус</th>
+                        <th>Дата создания</th>
                     </tr>
                 </thead>
                 <tbody>
                     <template for:each={cases} for:item="c">
-                        <tr key={c.id}>
+                        <tr key={c.id} class={c.className}>
                             <td>
                                 <a href="javascript:void(0);" onclick={handleCaseClick} data-id={c.id}>{c.caseNumber}</a>
                             </td>
