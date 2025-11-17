@@ -20,7 +20,7 @@
                 </thead>
                 <tbody>
                     <template for:each={displayCases} for:item="c">
-                        <tr key={c.id} class={c.className} data-case-id={c.id}>
+                        <tr key={c.renderKey} class={c.className} data-case-id={c.id}>
                             <td><a href="javascript:void(0);" data-id={c.id} onclick={handleCaseClick}>{c.caseNumber}</a></td>
                             <td>{c.subject}</td>
                             <td><a href="javascript:void(0);" data-id={c.ownerId} onclick={handleOwnerClick}>{c.ownerName}</a></td>
@@ -37,4 +37,3 @@
         </div>
     </lightning-card>
 </template>
-    

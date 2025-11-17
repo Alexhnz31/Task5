@@ -21,7 +21,7 @@ public with sharing class ServiceCaseQueueService {
         Set<Id> queueIds = getUserQueueIds();
 
         List<Case> rawCases = [
-            SELECT Id, CaseNumber, Subject, Priority, Status, CreatedDate, Owner.Name, OwnerId
+            SELECT Id, CaseNumber, Subject, Priority, Status, CreatedDate, LastModifiedDate, Owner.Name, OwnerId
             FROM Case
             WHERE OwnerId = :userId OR OwnerId IN :queueIds
             ORDER BY CreatedDate DESC
@@ -67,7 +67,8 @@ public with sharing class ServiceCaseQueueService {
         @AuraEnabled public String subject;
         @AuraEnabled public String priority;
         @AuraEnabled public String status;
-        @AuraEnabled public DateTime createdDate;
+    @AuraEnabled public DateTime createdDate;
+    @AuraEnabled public DateTime lastModifiedDate;
         @AuraEnabled public String ownerName;
         @AuraEnabled public Id ownerId;
 
@@ -80,6 +81,7 @@ public with sharing class ServiceCaseQueueService {
             this.priority = c.Priority;
             this.status = c.Status;
             this.createdDate = c.CreatedDate;
+            this.lastModifiedDate = c.LastModifiedDate;
             this.ownerName = c.Owner.Name;
             this.ownerId = c.OwnerId;
             this.userId = currentUserId;

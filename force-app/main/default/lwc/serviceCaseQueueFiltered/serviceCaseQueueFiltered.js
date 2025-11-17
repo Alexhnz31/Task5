@@ -92,18 +92,48 @@ export default class ServiceCaseQueueFiltered extends NavigationMixin(LightningE
     processCases(rawCases) {
         this.isLoading = true;
 
+        // Build map of previous lastModified timestamps
+        const prevModifiedMap = new Map();
+        if (this.cases && Array.isArray(this.cases)) {
+            for (const pc of this.cases) {
+                if (pc && pc.id) {
+                    prevModifiedMap.set(pc.id, pc.lastModifiedDate ? (new Date(pc.lastModifiedDate)).getTime() : null);
+                }
+            }
+        }
+
         const oldIds = new Set(this.displayCases.map(dc => dc.id));
         const newCaseIds = new Set(rawCases.map(c => c.id));
 
         // Cases that were visible before but not now - they should disappear
         const casesToRemove = this.displayCases.filter(dc => !newCaseIds.has(dc.id));
-        
-        const newCases = rawCases.map(c => ({
-            ...c,
-            createdDate: new Date(c.createdDate).toLocaleString(),
-            className: oldIds.has(c.id) ? '' : 'appearing',
-            isDisabled: this.editingCases.has(c.id)
-        }));
+
+        const newCases = rawCases.map(c => {
+            const createdDate = c.createdDate ? new Date(c.createdDate).toLocaleString() : '';
+            const lastMod = c.lastModifiedDate ? (new Date(c.lastModifiedDate)).getTime() : null;
+
+            // Determine if this case is new or updated since last seen
+            let className = '';
+            if (!prevModifiedMap.has(c.id)) {
+                // new case
+                className = 'appearing';
+            } else {
+                const prevTs = prevModifiedMap.get(c.id);
+                if (prevTs === null && lastMod !== null) {
+                    className = 'appearing';
+                } else if (prevTs !== null && lastMod !== null && lastMod > prevTs) {
+                    // updated case - animate as appearing
+                    className = 'appearing';
+                }
+            }
+
+            return {
+                ...c,
+                createdDate,
+                className,
+                isDisabled: this.editingCases.has(c.id)
+            };
+        });
 
         // Mark disappearing cases
         const disappearingCases = casesToRemove.map(r => ({ ...r, className: 'disappearing' }));
@@ -111,6 +141,7 @@ export default class ServiceCaseQueueFiltered extends NavigationMixin(LightningE
         this.displayCases = [...newCases, ...disappearingCases];
         this.cases = rawCases;
 
+        // After animation duration, clean up disappearing and reset classNames from 'appearing' to ''
         setTimeout(() => {
             this.displayCases = this.displayCases
                 .filter(d => d.className !== 'disappearing')
