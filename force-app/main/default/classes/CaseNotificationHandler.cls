@@ -1,11 +1,14 @@
 public with sharing class CaseNotificationHandler {
     public static void handleNewQueueCases(List<Case> newCases, Map<Id, Case> oldMap) {
         Set<Id> queueIds = new Set<Id>();
+        List<Case> casesForNotification = new List<Case>();
+
         for (Case c : newCases) {
             Boolean isInsert = (oldMap == null);
             Id oldOwner = isInsert ? null : oldMap.get(c.Id).OwnerId;
             if ((isInsert || oldOwner != c.OwnerId) && String.valueOf(c.OwnerId).startsWith('00G')) {
                 queueIds.add(c.OwnerId);
+                casesForNotification.add(c);
             }
         }
         if (queueIds.isEmpty()) return;
@@ -29,17 +32,29 @@ public with sharing class CaseNotificationHandler {
             }
         }
 
-        Id notifTypeId = [SELECT Id FROM CustomNotificationType WHERE DeveloperName = 'New_Case_Available' LIMIT 1].Id;
+        Id notifTypeId;
+        try {
+            notifTypeId = [SELECT Id FROM CustomNotificationType WHERE DeveloperName = 'New_Case_Available' LIMIT 1].Id;
+        } catch (QueryException e) {
+            System.debug('CustomNotificationType not found, skipping notifications');
+            return;
+        }
         String baseUrl = System.URL.getOrgDomainUrl().toExternalForm();
 
-        for (Case c : newCases) {
+        for (Case c : casesForNotification) {
             if (queues.containsKey(c.OwnerId)) {
                 Messaging.CustomNotification notif = new Messaging.CustomNotification();
                 notif.setTitle('Новый кейс доступен');
-                String body = 'Новый кейс ' + c.CaseNumber + ' доступен. Прямая ссылка: ' + baseUrl + '/lightning/r/Case/' + c.Id + '/view. Входящие кейсы: ' + baseUrl + '/lightning/n/Case_Inbox.';
+                
+                // Get the component link - using the standard flexipage that contains our component
+                String caseLink = baseUrl + '/lightning/r/Case/' + c.Id + '/view';
+                String componentLink = baseUrl + '/lightning/n/Case_Inbox';
+                
+                String body = 'New Case ' + c.CaseNumber + ' is available. Direct link: ' + caseLink + '. Case inbox: ' + componentLink;
                 notif.setBody(body);
                 notif.setNotificationTypeId(notifTypeId);
                 notif.setTargetId(c.Id);
+                
                 // Преобразуем Set<Id> в Set<String> для метода send
                 Set<String> recipients = new Set<String>();
                 for (Id userId : queueMembers.get(c.OwnerId)) {

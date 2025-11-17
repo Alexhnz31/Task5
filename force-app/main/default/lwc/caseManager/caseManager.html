@@ -1,9 +1,28 @@
 <template>
     <lightning-card title="Управление кейсами">
-        <div>
-            <lightning-input label="Тема кейса" value={caseSubject} onchange={handleCaseSubjectChange}></lightning-input>
-            <lightning-button label="Создать кейс" onclick={createCase}></lightning-button>
-            <lightning-button label="Назначить себе" onclick={assignCase} disabled={isLoading}></lightning-button>
+        <div class="slds-p-around_medium">
+            <lightning-combobox 
+                name="caseSelect"
+                label="Выберите кейс"
+                value={selectedCaseId}
+                options={caseOptions}
+                onchange={handleCaseChange}>
+            </lightning-combobox>
+
+            <div class="slds-m-top_small">
+                <lightning-button 
+                    label="Назначить себе" 
+                    onclick={assignCase} 
+                    variant="brand" 
+                    disabled={isAssignDisabled}>
+                </lightning-button>
+            </div>
+
+            <template if:true={isLoading}>
+                <div class="slds-m-top_small">
+                    <lightning-spinner alternative-text="Загрузка" size="small"></lightning-spinner>
+                </div>
+            </template>
         </div>
     </lightning-card>
 </template>

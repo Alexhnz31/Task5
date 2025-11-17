@@ -7,91 +7,153 @@ import updateCaseStatus from '@salesforce/apex/ServiceCaseQueueService.updateCas
 import { getObjectInfo, getPicklistValues } from 'lightning/uiObjectInfoApi';
 import CASE_OBJECT from '@salesforce/schema/Case';
 
+import { publish, subscribe, unsubscribe, MessageContext } from 'lightning/messageService';
+import CASE_UPDATES_CHANNEL from '@salesforce/messageChannel/CaseUpdatesChannel__c';
+
 export default class ServiceCaseQueueFiltered extends NavigationMixin(LightningElement) {
-    @api title = 'Неделя 5';
+    @api title = 'Входящие кейсы';
     @track cases = [];
+    @track displayCases = [];
     @track isLoading = false;
     @track statusOptions = [];
-    wiredCasesResult;
 
-    @wire(getUserCases)
-    wiredCases(result) {
-        this.wiredCasesResult = result;
-        if (result.data) {
-            const oldIds = new Set(this.cases.map(c => c.id));
-            let newCases = result.data.map(c => ({
-                ...c,
-                createdDate: new Date(c.createdDate).toLocaleString(),
-                className: oldIds.has(c.id) ? '' : 'appearing'
-            }));
-            const removed = this.cases.filter(c => !result.data.some(nc => nc.id === c.id));
-            const disappearingCases = removed.map(c => ({ ...c, className: 'disappearing' }));
-            this.cases = [...newCases, ...disappearingCases];
-            setTimeout(() => {
-                this.cases = this.cases.filter(c => c.className !== 'disappearing').map(c => {
-                    if (c.className === 'appearing') c.className = '';
-                    return c;
-                });
-            }, 1000);
-            this.isLoading = false;
-        } else if (result.error) {
-            this.showToast('Ошибка', result.error.body?.message || 'Не удалось загрузить кейсы', 'error');
-            this.isLoading = false;
-        }
-    }
+    wiredCasesResult;
+    subscription = null;
+    pollingIntervalId = null;
+    lastRefreshTime = 0;
+    pollingInterval = 1000; // Poll every 1 second for real-time updates
+
+    @track editingCases = new Set(); // кейсы, которые редактируют другие пользователи
+
+    @wire(MessageContext)
+    messageContext;
 
     @wire(getObjectInfo, { objectApiName: CASE_OBJECT }) objectInfo;
-
     @wire(getPicklistValues, {
         recordTypeId: '$objectInfo.data.defaultRecordTypeId',
         fieldApiName: 'Case.Status'
     })
     wiredPicklistValues({ error, data }) {
         if (data) {
-            this.statusOptions = data.values.map(item => ({
-                label: item.label,
-                value: item.value
-            }));
+            this.statusOptions = data.values.map(v => ({ label: v.label, value: v.value }));
         } else if (error) {
-            this.showToast('Ошибка', 'Не удалось загрузить список статусов', 'error');
+            this.showToast('Ошибка', 'Не удалось загрузить статусы', 'error');
+        }
+    }
+
+    @wire(getUserCases)
+    wiredCases(result) {
+        this.wiredCasesResult = result;
+        if (result.data) {
+            this.processCases(result.data);
+        } else if (result.error) {
+            this.showToast('Ошибка', result.error.body?.message || 'Не удалось загрузить кейсы', 'error');
         }
     }
 
     connectedCallback() {
-        // Слушаем кастомное событие caseChange
-        this.addEventListener('caseChange', this.handleCaseChange.bind(this));
+        if (!this.subscription) {
+            this.subscription = subscribe(
+                this.messageContext,
+                CASE_UPDATES_CHANNEL,
+                (message) => this.handleLmsMessage(message)
+            );
+        }
+
+        // Start polling for real-time updates
+        this.startPolling();
     }
 
     disconnectedCallback() {
-        // Удаляем слушатель события
-        this.removeEventListener('caseChange', this.handleCaseChange.bind(this));
-    }
+        if (this.subscription) {
+            unsubscribe(this.subscription);
+            this.subscription = null;
+        }
 
-    handleCaseChange(event) {
-        // Обновляем список кейсов при получении события
-        this.isLoading = true;
-        refreshApex(this.wiredCasesResult).finally(() => {
-            this.isLoading = false;
-        });
-    }
-
-    async handleRefresh() {
-        this.isLoading = true;
-        try {
-            await refreshApex(this.wiredCasesResult);
-        } catch (e) {
-            this.showToast('Ошибка', e.body?.message || 'Обновление не удалось', 'error');
-        } finally {
-            this.isLoading = false;
+        if (this.pollingIntervalId) {
+            clearInterval(this.pollingIntervalId);
+            this.pollingIntervalId = null;
         }
     }
 
-    handleCaseClick(e) { this.navigateToRecord(e.target.dataset.id); }
-    handleOwnerClick(e) { this.navigateToRecord(e.target.dataset.id); }
+    startPolling() {
+        if (this.pollingIntervalId) {
+            clearInterval(this.pollingIntervalId);
+        }
+
+        this.pollingIntervalId = setInterval(() => {
+            // Don't poll if we're already loading
+            if (!this.isLoading) {
+                refreshApex(this.wiredCasesResult).catch(() => {});
+            }
+        }, this.pollingInterval);
+    }
+
+    processCases(rawCases) {
+        this.isLoading = true;
+
+        const oldIds = new Set(this.displayCases.map(dc => dc.id));
+        const newCaseIds = new Set(rawCases.map(c => c.id));
+
+        // Cases that were visible before but not now - they should disappear
+        const casesToRemove = this.displayCases.filter(dc => !newCaseIds.has(dc.id));
+        
+        const newCases = rawCases.map(c => ({
+            ...c,
+            createdDate: new Date(c.createdDate).toLocaleString(),
+            className: oldIds.has(c.id) ? '' : 'appearing',
+            isDisabled: this.editingCases.has(c.id)
+        }));
+
+        // Mark disappearing cases
+        const disappearingCases = casesToRemove.map(r => ({ ...r, className: 'disappearing' }));
+
+        this.displayCases = [...newCases, ...disappearingCases];
+        this.cases = rawCases;
+
+        setTimeout(() => {
+            this.displayCases = this.displayCases
+                .filter(d => d.className !== 'disappearing')
+                .map(d => ({ ...d, className: d.className === 'appearing' ? '' : d.className }));
+            this.isLoading = false;
+        }, 1000);
+    }
+
+
+    handleLmsMessage(message) {
+        if (!message?.caseId) return;
+
+        // если кто-то начал редактировать кейс
+        if (message.action === 'editingStart') {
+            this.editingCases.add(message.caseId);
+        } else if (message.action === 'editingEnd') {
+            this.editingCases.delete(message.caseId);
+        }
+
+        // любые изменения кейса: assignment, status, creation, deletion
+        // Refresh immediately on status change
+        if (message.action === 'statusChanged' || message.action === 'assigned') {
+            refreshApex(this.wiredCasesResult).catch(() => {});
+        }
+    }
+
+    handleCaseClick(e) {
+        const caseId = e.currentTarget.dataset.id;
+        const caseItem = this.displayCases.find(c => c.id === caseId);
+        if (caseItem?.isDisabled) return; // не кликаем если редактируется другим
+        this.navigateToRecord(caseId);
+    }
+
+    handleOwnerClick(e) {
+        const caseId = e.currentTarget.dataset.id;
+        const caseItem = this.displayCases.find(c => c.id === caseId);
+        if (caseItem?.isDisabled) return; 
+        this.navigateToRecord(caseId);
+    }
 
     navigateToRecord(id) {
         this[NavigationMixin.Navigate]({
-        type: 'standard__recordPage',
+            type: 'standard__recordPage',
             attributes: { recordId: id, actionName: 'view' }
         });
     }
@@ -99,22 +161,32 @@ export default class ServiceCaseQueueFiltered extends NavigationMixin(LightningE
     async handleStatusChange(e) {
         const caseId = e.target.dataset.caseId;
         const newStatus = e.detail.value;
+
+        if (this.editingCases.has(caseId)) return; // не редактируем чужой
+
+        // сигнализируем LMS, что начали редактировать
+        publish(this.messageContext, CASE_UPDATES_CHANNEL, { caseId, action: 'editingStart' });
+
         this.isLoading = true;
         try {
             await updateCaseStatus({ caseId, newStatus });
-            this.showToast('Успех', 'Статус кейса обновлен', 'success');
+            this.showToast('Успех', 'Статус обновлён', 'success');
+
+            // публикуем LMS о статусе
+            publish(this.messageContext, CASE_UPDATES_CHANNEL, { caseId, action: 'statusChanged' });
+            
+            // Refresh data immediately
             await refreshApex(this.wiredCasesResult);
-            // Отправляем кастомное событие после обновления статуса
-            const caseChangeEvent = new CustomEvent('caseChange', { bubbles: true, composed: true });
-            this.dispatchEvent(caseChangeEvent);
         } catch (e) {
-            this.showToast('Ошибка', e.body?.message || 'Обновление не удалось', 'error');
+            this.showToast('Ошибка', e?.body?.message || 'Не удалось обновить статус', 'error');
         } finally {
             this.isLoading = false;
+            // сигнализируем, что закончили редактировать
+            publish(this.messageContext, CASE_UPDATES_CHANNEL, { caseId, action: 'editingEnd' });
         }
     }
 
-    showToast(title, message, variant) {
+    showToast(title, message, variant='info') {
         this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
     }
 }

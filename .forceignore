@@ -4,6 +4,9 @@
 
 package.xml
 
+# Platform Events (not needed for polling approach)
+force-app/main/default/platformEvents/
+
 # LWC configuration files
 **/jsconfig.json
 **/.eslintrc.json

@@ -1,19 +1,18 @@
 public with sharing class CaseManagerController {
-    @AuraEnabled
-    public static Id createCase(String subject) {
-        Case c = new Case(
-            Subject = subject, // Используем subject вместо CaseNumber
-            Status = 'New',
-            Priority = 'Medium',
-            Origin = 'Web'
-        );
-        insert c;
-        return c.Id; // Возвращаем ID созданного кейса для дальнейшего использования
+    @AuraEnabled(cacheable=true)
+    public static List<Case> getOpenCases() {
+        return [
+            SELECT Id, CaseNumber, Subject 
+            FROM Case 
+            WHERE Status != 'Closed' 
+            ORDER BY CreatedDate DESC
+            LIMIT 50
+        ];
     }
 
     @AuraEnabled
-    public static void assignCaseToUser(String caseId) {
-        Case c = [SELECT Id FROM Case WHERE Id = :caseId LIMIT 1];
+    public static void assignCaseToUser(Id caseId) {
+        Case c = [SELECT Id, OwnerId FROM Case WHERE Id = :caseId LIMIT 1];
         c.OwnerId = UserInfo.getUserId();
         update c;
     }

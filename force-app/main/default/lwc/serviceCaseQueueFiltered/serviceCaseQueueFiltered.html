@@ -1,41 +1,32 @@
 <template>
     <lightning-card title={title}>
-        <div>
-            <lightning-button label="Обновить" onclick={handleRefresh} disabled={isLoading}></lightning-button>
-
+        <div class="slds-p-around_medium">
             <template if:true={isLoading}>
-                <lightning-spinner alternative-text="Загрузка" size="medium"></lightning-spinner>
+                <div class="slds-m-bottom_small">
+                    <lightning-spinner alternative-text="Загрузка" size="medium"></lightning-spinner>
+                </div>
             </template>
 
-            <table>
+            <table class="slds-table slds-table_cell-buffer slds-table_bordered">
                 <thead>
-                    <tr>
-                        <th>Номер кейса</th>
-                        <th>Тема</th>
-                        <th>Владелец</th>
-                        <th>Приоритет</th>
-                        <th>Статус</th>
-                        <th>Дата создания</th>
+                    <tr class="slds-line-height_reset">
+                        <th><div class="slds-truncate">Номер кейса</div></th>
+                        <th><div class="slds-truncate">Тема</div></th>
+                        <th><div class="slds-truncate">Владелец</div></th>
+                        <th><div class="slds-truncate">Приоритет</div></th>
+                        <th><div class="slds-truncate">Статус</div></th>
+                        <th><div class="slds-truncate">Создан</div></th>
                     </tr>
                 </thead>
                 <tbody>
-                    <template for:each={cases} for:item="c">
-                        <tr key={c.id} class={c.className}>
-                            <td>
-                                <a href="javascript:void(0);" onclick={handleCaseClick} data-id={c.id}>{c.caseNumber}</a>
-                            </td>
+                    <template for:each={displayCases} for:item="c">
+                        <tr key={c.id} class={c.className} data-case-id={c.id}>
+                            <td><a href="javascript:void(0);" data-id={c.id} onclick={handleCaseClick}>{c.caseNumber}</a></td>
                             <td>{c.subject}</td>
-                            <td>
-                                <a href="javascript:void(0);" onclick={handleOwnerClick} data-id={c.ownerId}>{c.ownerName}</a>
-                            </td>
+                            <td><a href="javascript:void(0);" data-id={c.ownerId} onclick={handleOwnerClick}>{c.ownerName}</a></td>
                             <td>{c.priority}</td>
                             <td>
-                                <lightning-combobox
-                                    value={c.status}
-                                    options={statusOptions}
-                                    onchange={handleStatusChange}
-                                    data-case-id={c.id}
-                                    disabled={isLoading}>
+                                <lightning-combobox value={c.status} options={statusOptions} onchange={handleStatusChange} data-case-id={c.id} disabled={isLoading}>
                                 </lightning-combobox>
                             </td>
                             <td>{c.createdDate}</td>
@@ -46,3 +37,4 @@
         </div>
     </lightning-card>
 </template>
+    

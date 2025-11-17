@@ -44,6 +44,22 @@ public with sharing class ServiceCaseQueueService {
         update new Case(Id = caseId, Status = newStatus);
     }
 
+    // Log case changes for real-time synchronization
+    public static void logCaseChanges(List<Case> newCases, Map<Id, Case> oldMap, Boolean isInsert) {
+        // This method can be extended to log to a custom object if needed
+        // For now, the platform event publishing will happen via trigger
+        for (Case c : newCases) {
+            String action = isInsert ? 'created' : 'updated';
+            if (!isInsert && oldMap != null) {
+                Case oldCase = oldMap.get(c.Id);
+                if (oldCase.OwnerId != c.OwnerId) {
+                    action = 'assigned';
+                }
+            }
+            System.debug('Case ' + c.Id + ' action: ' + action);
+        }
+    }
+
     //Обертка для кейса + сортировка
     public class CaseWrapper implements Comparable {
         @AuraEnabled public Id id;
