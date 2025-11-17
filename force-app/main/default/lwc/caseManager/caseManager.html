@@ -1,0 +1,28 @@
+<template>
+    <lightning-card title="Manager Cases">
+        <div class="slds-p-around_medium">
+            <lightning-combobox 
+                name="caseSelect"
+                label="Select Case FOR Assignment"
+                value={selectedCaseId}
+                options={caseOptions}
+                onchange={handleCaseChange}>
+            </lightning-combobox>
+
+            <div class="slds-m-top_small">
+                <lightning-button 
+                    label="Assignment Case" 
+                    onclick={assignCase} 
+                    variant="brand" 
+                    disabled={isAssignDisabled}>
+                </lightning-button>
+            </div>
+
+            <template if:true={isLoading}>
+                <div class="slds-m-top_small">
+                    <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+</template>

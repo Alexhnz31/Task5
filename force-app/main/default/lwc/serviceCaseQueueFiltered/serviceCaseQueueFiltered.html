@@ -1,0 +1,38 @@
+<template>
+    <lightning-card title={title}>
+        <div class="slds-p-around_medium">
+            <template if:true={isLoading}>
+                <div class="slds-m-bottom_small">
+                    <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                </div>
+            </template>
+            <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                <thead>
+                    <tr class="slds-line-height_reset">
+                        <th><div class="slds-truncate">Number of Case</div></th>
+                        <th><div class="slds-truncate">Subject</div></th>
+                        <th><div class="slds-truncate">Owner</div></th>
+                        <th><div class="slds-truncate">Priority</div></th>
+                        <th><div class="slds-truncate">Status</div></th>
+                        <th><div class="slds-truncate">Created Date</div></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template for:each={displayCases} for:item="c">
+                        <tr key={c.renderKey} class={c.className} data-case-id={c.id} style={c.rowStyle}>
+                            <td><a href="javascript:void(0);" data-id={c.id} onclick={handleCaseClick}>{c.caseNumber}</a></td>
+                            <td>{c.subject}</td>
+                            <td><a href="javascript:void(0);" data-id={c.ownerId} onclick={handleOwnerClick}>{c.ownerName}</a></td>
+                            <td class={c.priorityClass}>{c.priority}</td>
+                            <td>
+                                <lightning-combobox value={c.status} options={statusOptions} onchange={handleStatusChange} data-case-id={c.id} disabled={isLoading}>
+                                </lightning-combobox>
+                            </td>
+                            <td>{c.createdDate}</td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </lightning-card>
+</template>

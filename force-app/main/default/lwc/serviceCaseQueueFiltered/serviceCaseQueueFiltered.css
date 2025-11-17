@@ -1,0 +1,51 @@
+.appearing {
+    animation: slideDown 1s ease-out forwards;
+    pointer-events: auto;
+}
+.disappearing {
+    animation: slideUp 1s ease-in forwards;
+    pointer-events: none;
+}
+@keyframes slideDown {
+    0% {
+        opacity: 0.2;
+        transform: translateY(-25px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@keyframes slideUp {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0.2;
+        transform: translateY(-25px);
+    }
+}
+tr.appearing,
+tr.disappearing {
+    display: table-row;
+    font-weight: 800;
+}
+.priority-high {
+    background-color: #fee;
+    color: #c00;
+    font-weight: 600;
+}
+.priority-medium {
+    background-color: #ffeaa7;
+    color: #d63031;
+    font-weight: 500;
+}
+.priority-low {
+    background-color: #d4edda;
+    color: #155724;
+    font-weight: normal;
+}
+
+
+
