@@ -30,7 +30,6 @@ public without sharing class AccountCasesPdfCtrl {
         }
         return rows;
     }
-
     public class CaseWrapper {
         public String accountName{ get; set; }
         public String accountOwnerName { get; set; }

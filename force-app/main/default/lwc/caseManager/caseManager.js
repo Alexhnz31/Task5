@@ -55,15 +55,14 @@ export default class CaseManager extends LightningElement {
             const caseIdToAssign = this.selectedCaseId;
             await assignCaseToUser({ caseId: caseIdToAssign });
 
-            // Получаем имя текущего пользователя 
+            // Получаем  текущего пользователя 
             const assignedUserName = this.currentUser?.data?.fields?.Name?.value || 'Вам';
             const caseUrl = `/lightning/r/Case/${caseIdToAssign}/view`;
 
-            // Найдём номер кейса для использования в метке ссылки
             const caseItem = this.cases.find(ci => ci.id === caseIdToAssign) || {};
             const caseNumberLabel = caseItem.caseNumber || caseIdToAssign;
 
-            // Ссылка на профиль текущего юзера)
+            // Ссылка на профиль текущего юзера
             const ownerUrl = `/lightning/r/User/${USER_ID}/view`;
 
             this.dispatchEvent(new ShowToastEvent({
@@ -112,7 +111,6 @@ export default class CaseManager extends LightningElement {
                 .map(d => ({ ...d, className: d.className === 'appearing' ? '' : d.className }));
         }, 2000);
     }
-
     showToast(title, message, variant = 'info') {
         this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
     }

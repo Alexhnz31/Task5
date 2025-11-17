@@ -19,7 +19,6 @@ public with sharing class CaseNotificationHandler {
         Map<Id, Group> queues = new Map<Id, Group>([
             SELECT Id FROM Group WHERE Id IN :queueIds AND Type = 'Queue'
         ]);
-
         Map<Id, Set<Id>> queueMembers = new Map<Id, Set<Id>>();
         for (Id q : queues.keySet()) {
             queueMembers.put(q, new Set<Id>());
@@ -34,7 +33,6 @@ public with sharing class CaseNotificationHandler {
                 queueMembers.get(gm.GroupId).add(gm.UserOrGroupId);
             }
         }
-
         Id notifTypeId;
         try {//без этого не работает assigmnent на кейсе
             notifTypeId = [SELECT Id FROM CustomNotificationType WHERE DeveloperName = 'New_Case_Available' LIMIT 1].Id;

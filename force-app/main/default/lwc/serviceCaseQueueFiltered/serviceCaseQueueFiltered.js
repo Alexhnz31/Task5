@@ -165,7 +165,6 @@ export default class ServiceCaseQueueFiltered extends NavigationMixin(LightningE
         };
         return priorityMap[priority] || '';
     }
-
     sortCases(cases) {
         console.log('Sorting cases. Current user name:', this.currentUserName);
         return [...cases].sort((a, b) => {

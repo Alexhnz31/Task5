@@ -9,7 +9,6 @@ public with sharing class CaseManagerController {
             LIMIT 50
         ];
     }
-
     @AuraEnabled
     public static void assignCaseToUser(Id caseId) {
         Case c = [SELECT Id, OwnerId FROM Case WHERE Id = :caseId LIMIT 1];
