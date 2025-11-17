@@ -3,6 +3,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 import { NavigationMixin } from 'lightning/navigation';
 import getUserCases from '@salesforce/apex/ServiceCaseQueueService.getUserCases';
+import getCurrentUserName from '@salesforce/apex/ServiceCaseQueueService.getCurrentUserName';
 import updateCaseStatus from '@salesforce/apex/ServiceCaseQueueService.updateCaseStatus';
 import { getObjectInfo, getPicklistValues } from 'lightning/uiObjectInfoApi';
 import CASE_OBJECT from '@salesforce/schema/Case';
@@ -16,6 +17,7 @@ export default class ServiceCaseQueueFiltered extends NavigationMixin(LightningE
     @track displayCases = [];
     @track isLoading = false;
     @track statusOptions = [];
+    @track currentUserName = ''; // Store current user name for sorting
 
     wiredCasesResult;
     subscription = null;
@@ -38,6 +40,16 @@ export default class ServiceCaseQueueFiltered extends NavigationMixin(LightningE
             this.statusOptions = data.values.map(v => ({ label: v.label, value: v.value }));
         } else if (error) {
             this.showToast('Ошибка', 'Не удалось загрузить статусы', 'error');
+        }
+    }
+
+    @wire(getCurrentUserName)
+    wiredCurrentUserName({ error, data }) {
+        if (data) {
+            this.currentUserName = data;
+        } else if (error) {
+            console.error('Error loading current user name:', error);
+            this.currentUserName = '';
         }
     }
 
@@ -112,9 +124,12 @@ export default class ServiceCaseQueueFiltered extends NavigationMixin(LightningE
         const delayStep = 120; // ms between each row start
         const animationDuration = 1000; // ms (matches CSS)
 
+        // Sort cases: my cases first, then by subject (alphabetically)
+        const sortedRawCases = this.sortCases(rawCases);
+
         // Force all rows to animate on every refresh with staggered delays (wave effect)
         // This means every row gets a new renderKey and 'appearing' class
-        const allCasesWithAnimation = rawCases.map((c, idx) => {
+        const allCasesWithAnimation = sortedRawCases.map((c, idx) => {
             const createdDate = c.createdDate ? new Date(c.createdDate).toLocaleString() : '';
             
             // All rows get 'appearing' class and staggered delay for the wave
@@ -137,10 +152,10 @@ export default class ServiceCaseQueueFiltered extends NavigationMixin(LightningE
 
         // Use animated rows for display
         this.displayCases = allCasesWithAnimation;
-        this.cases = rawCases;
+        this.cases = sortedRawCases;
 
         // Compute maximum wait time: the largest animation delay + animation duration
-        const maxDelay = (rawCases.length - 1) * delayStep;
+        const maxDelay = (sortedRawCases.length - 1) * delayStep;
         const cleanupWait = maxDelay + animationDuration + 50; // small buffer
 
         // After animations finish, clear appearing flags so rows stay visible and stable
@@ -148,6 +163,29 @@ export default class ServiceCaseQueueFiltered extends NavigationMixin(LightningE
             this.displayCases = this.displayCases.map(d => ({ ...d, className: '' }));
             this.isLoading = false;
         }, cleanupWait);
+    }
+
+    // Sort cases: my cases first (by owner name), then by subject (alphabetically)
+    sortCases(cases) {
+        console.log('Sorting cases. Current user name:', this.currentUserName);
+        return [...cases].sort((a, b) => {
+            // First: my cases come first
+            const aIsMine = a.ownerName === this.currentUserName;
+            const bIsMine = b.ownerName === this.currentUserName;
+            
+            console.log(`Comparing: "${a.ownerName}" (isMine=${aIsMine}) vs "${b.ownerName}" (isMine=${bIsMine})`);
+            
+            if (aIsMine && !bIsMine) return -1; // a comes first
+            if (!aIsMine && bIsMine) return 1;  // b comes first
+            
+            // If both are mine or both are not mine, sort by subject (alphabetically)
+            const aSubject = (a.subject || '').toLowerCase();
+            const bSubject = (b.subject || '').toLowerCase();
+            
+            const result = aSubject.localeCompare(bSubject);
+            console.log(`  Subject sort: "${aSubject}" vs "${bSubject}" => ${result}`);
+            return result;
+        });
     }
 
 

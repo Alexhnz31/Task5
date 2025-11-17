@@ -1,6 +1,18 @@
 public with sharing class ServiceCaseQueueService {
 
 
+    // Get current user info for client-side filtering/sorting
+    @AuraEnabled(cacheable=true)
+    public static String getCurrentUserId() {
+        return UserInfo.getUserId();
+    }
+
+    // Get current user name for client-side filtering/sorting
+    @AuraEnabled(cacheable=true)
+    public static String getCurrentUserName() {
+        return UserInfo.getName();
+    }
+
     //Получаем очереди где есть наш юзер
     private static Set<Id> getUserQueueIds() {
         Set<Id> queueIds = new Set<Id>();
