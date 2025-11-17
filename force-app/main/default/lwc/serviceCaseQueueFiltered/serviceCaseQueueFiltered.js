@@ -108,46 +108,46 @@ export default class ServiceCaseQueueFiltered extends NavigationMixin(LightningE
         // Cases that were visible before but not now - they should disappear
         const casesToRemove = this.displayCases.filter(dc => !newCaseIds.has(dc.id));
 
-        const newCases = rawCases.map(c => {
+        // We'll add a small stagger so rows appear like a wave. Delay step in ms.
+        const delayStep = 120; // ms between each row start
+        const animationDuration = 1000; // ms (matches CSS)
+
+        // Force all rows to animate on every refresh with staggered delays (wave effect)
+        // This means every row gets a new renderKey and 'appearing' class
+        const allCasesWithAnimation = rawCases.map((c, idx) => {
             const createdDate = c.createdDate ? new Date(c.createdDate).toLocaleString() : '';
-            const lastMod = c.lastModifiedDate ? (new Date(c.lastModifiedDate)).getTime() : null;
-
-            // Determine if this case is new or updated since last seen
-            let className = '';
-            if (!prevModifiedMap.has(c.id)) {
-                // new case
-                className = 'appearing';
-            } else {
-                const prevTs = prevModifiedMap.get(c.id);
-                if (prevTs === null && lastMod !== null) {
-                    className = 'appearing';
-                } else if (prevTs !== null && lastMod !== null && lastMod > prevTs) {
-                    // updated case - animate as appearing
-                    className = 'appearing';
-                }
-            }
-
+            
+            // All rows get 'appearing' class and staggered delay for the wave
+            const animationDelay = idx * delayStep;
+            const rowStyle = `animation-delay: ${animationDelay}ms;`;
+            
+            // renderKey with timestamp forces LWC to re-create every row DOM element
+            // This ensures animation plays reliably on every refresh
+            const renderKey = `${c.id}-refresh-${Date.now()}-${idx}`;
+            
             return {
                 ...c,
                 createdDate,
-                className,
+                className: 'appearing',
+                rowStyle,
+                renderKey,
                 isDisabled: this.editingCases.has(c.id)
             };
         });
 
-        // Mark disappearing cases
-        const disappearingCases = casesToRemove.map(r => ({ ...r, className: 'disappearing' }));
-
-        this.displayCases = [...newCases, ...disappearingCases];
+        // Use animated rows for display
+        this.displayCases = allCasesWithAnimation;
         this.cases = rawCases;
 
-        // After animation duration, clean up disappearing and reset classNames from 'appearing' to ''
+        // Compute maximum wait time: the largest animation delay + animation duration
+        const maxDelay = (rawCases.length - 1) * delayStep;
+        const cleanupWait = maxDelay + animationDuration + 50; // small buffer
+
+        // After animations finish, clear appearing flags so rows stay visible and stable
         setTimeout(() => {
-            this.displayCases = this.displayCases
-                .filter(d => d.className !== 'disappearing')
-                .map(d => ({ ...d, className: d.className === 'appearing' ? '' : d.className }));
+            this.displayCases = this.displayCases.map(d => ({ ...d, className: '' }));
             this.isLoading = false;
-        }, 1000);
+        }, cleanupWait);
     }
 
 
